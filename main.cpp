@@ -3,21 +3,19 @@
 #include "asio.hpp"
 #include "asio/steady_timer.hpp"
 
-
-struct TimerItem {
-    TimerItem(asio::io_service & io_service, int seconds,
-              const std::function<void ()> & f) : timer(io_service),
-                                                  duration(seconds),
-                                                  func(f) {}
-
-    asio::steady_timer timer;
-    std::chrono::seconds duration;
-    std::function<void ()> func;
-};
-
-
+template <typename TimeUnit>
 class TimerManager {
  public:
+    struct TimerItem {
+        TimerItem(asio::io_service & io_service, int seconds,
+                const std::function<void ()> & f) : timer(io_service),
+                                                    duration(seconds),
+                                                    func(f) {}
+        asio::steady_timer timer;
+        TimeUnit duration;
+        std::function<void ()> func;
+    };
+
     TimerManager(asio::io_service & io_service) : io_service_(io_service) {}
     TimerManager(TimerManager &) = delete;
     TimerManager & operator = (const TimerManager &) = delete;
@@ -33,7 +31,7 @@ class TimerManager {
     void Run() {
         for(auto & item : this->items_) {
             asio::steady_timer & timer = item->timer;
-            const std::chrono::seconds & duration = item->duration;
+            const TimeUnit & duration = item->duration;
             const std::function<void ()> & func = item->func;
             TimerLoop(timer, duration, func);
         }
@@ -41,7 +39,7 @@ class TimerManager {
 
  protected:
     void TimerLoop(asio::steady_timer & timer,
-                   const std::chrono::seconds & duration,
+                   const TimeUnit & duration,
                    const std::function<void ()> & func) {
         timer.expires_from_now(duration);
         timer.async_wait([this, &timer, duration, func](
@@ -80,7 +78,7 @@ class Server
         std::cout << "Timer3Sec." << std::endl;
     }
  private:
-    TimerManager timer_manager_;
+    TimerManager<std::chrono::seconds> timer_manager_;
 };
 
 
