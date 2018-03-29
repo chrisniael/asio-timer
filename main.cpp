@@ -8,11 +8,11 @@ struct TimerItem {
     TimerItem(asio::io_service & io_service, int seconds,
               const std::function<void ()> & f) : timer(io_service),
                                                   duration(seconds),
-                                                  fun(f) {}
+                                                  func(f) {}
 
     asio::steady_timer timer;
     std::chrono::seconds duration;
-    std::function<void ()> fun;
+    std::function<void ()> func;
 };
 
 
@@ -22,31 +22,33 @@ class TimerManager {
     TimerManager(TimerManager &) = delete;
     TimerManager & operator = (const TimerManager &) = delete;
 
-    void Add(const unsigned int & duration,
-             const std::function<void ()> & fun) {
+    template <typename T>
+    void Add(T * obj, const unsigned int & duration,
+             void (T::* mem_func)()) {
+        std::function<void ()> func = std::bind(mem_func, obj);
         this->items_.push_back(std::make_shared<TimerItem>(
-                                   this->io_service_, duration, fun));
+                                   this->io_service_, duration, func));
     }
 
     void Run() {
         for(auto & item : this->items_) {
             asio::steady_timer & timer = item->timer;
             const std::chrono::seconds & duration = item->duration;
-            const std::function<void ()> & fun = item->fun;
-            TimerLoop(timer, duration, fun);
+            const std::function<void ()> & func = item->func;
+            TimerLoop(timer, duration, func);
         }
     }
 
  protected:
     void TimerLoop(asio::steady_timer & timer,
                    const std::chrono::seconds & duration,
-                   const std::function<void ()> & fun) {
+                   const std::function<void ()> & func) {
         timer.expires_from_now(duration);
-        timer.async_wait([this, &timer, duration, fun](
+        timer.async_wait([this, &timer, duration, func](
                              const asio::error_code &) {
                            std::cout << "async_wait, " << duration.count()
                                      << std::endl;
-                           TimerLoop(timer, duration, fun);
+                           TimerLoop(timer, duration, func);
                          });
     }
 
@@ -56,32 +58,20 @@ class TimerManager {
 };
 
 
-
-void Timer1Sec() {
-    std::cout << "Timer1Sec." << std::endl;
-}
-
-void Timer3Sec() {
-    std::cout << "Timer3Sec." << std::endl;
-}
-
 class Server
 {
  public:
     Server(asio::io_service & io_service) : timer_manager_(io_service) {}
 
     void Init() {
-        //timer_manager_.Add(this, 1, &Server::Timer1Sec);
-        //timer_manager_.Add(this, 3, &Server::Timer3Sec);
-        timer_manager_.Add(1, Timer1Sec);
-        timer_manager_.Add(3, Timer3Sec);
+        timer_manager_.Add(this, 1, &Server::Timer1Sec);
+        timer_manager_.Add(this, 3, &Server::Timer3Sec);
     }
 
     void Run() {
         timer_manager_.Run();
     }
 
-    /*
     void Timer1Sec() {
         std::cout << "Timer1Sec." << std::endl;
     }
@@ -89,7 +79,6 @@ class Server
     void Timer3Sec() {
         std::cout << "Timer3Sec." << std::endl;
     }
-    */
  private:
     TimerManager timer_manager_;
 };
