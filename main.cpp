@@ -46,6 +46,7 @@ class TimerManager {
                              const asio::error_code &) {
                            std::cout << "async_wait, " << duration.count()
                                      << std::endl;
+                           func();
                            TimerLoop(timer, duration, func);
                          });
     }
