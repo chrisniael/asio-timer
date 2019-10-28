@@ -2,6 +2,7 @@
 #define ASIO_TIMER_ASIO_TIMER_H_
 
 #include <chrono>
+#include <functional>
 
 #include "asio.hpp"
 #include "asio/steady_timer.hpp"
